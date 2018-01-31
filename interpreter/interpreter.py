@@ -1,3 +1,9 @@
+# TODO: - Implement CAJO READ & CAJO WRITE
+#       - CAJO_ADD and CAJO_SUBTRACT handling of over/underflow
+#       - CAJO_JUMP_IF_NEGATIVE, CAJO_JUM_IF_POSITIVE, CAJO_JUMP_IF_ZERO,
+#         CAJO_JUMP exception handling if destination pointer is out of bounds
+
+
 class Stack(object):
     """
     Stack of the CAJOlang interpreter
@@ -10,7 +16,7 @@ class Stack(object):
       - A temporary area, called temp_area​, that can hold one integer
     """
     def __init__(self):
-        self.integers = [None, None, None]
+        self.integer_mem = [None, None, None]
         self.file_handles = [None, None]
         self.temp_area = None
 
@@ -43,11 +49,58 @@ class Interpreter(object):
         }
 
     def __init__(self, source_file):
-        self._instruction_pointer = 0
+        # Instruction pointer is initialized at 1 because statement 0 of a
+        # CAJOlang source file is not an executable instruction
+        self._instruction_pointer = 1
         self._source_file = source_file
         self._stack = Stack()
 
-        self.execution_minute = self._get_execution_minute()
+        # Line count is initialized once the interpreter is started
+        self._source_line_count = None
+        # self.execution_minute = self._get_execution_minute()
+
+    @staticmethod
+    def int2bin(x):
+        """
+        Helper function, implements conversion of Python ints to C standard
+        16bit int, where the HO bit is the sign with 1 meaning negative and
+        negative numbers are represented using 2's complement.
+
+        # Args
+            - x: a python int
+
+        # Returns
+            - a string containig the 16bit representation of the integer
+        """
+        if x >= 0:
+            return format(x, '016b')
+        else:
+            return '1' + format(32768 + x, '015b')
+
+    @staticmethod
+    def bin2int(x):
+        """
+        Helper Method, converts a string of a C standard binary representation
+        of a int16_t to a pyton int. Is the inverse of int2bin
+
+        # Args
+            - x: a string containing the representation of a 16 bit int
+
+        # returns
+            - the python int corresponding to the binary input
+        """
+        if len(x) != 16:
+            raise ValueError("binary value must be 16 bits long")
+        else:
+            for bit in x:
+                if bit not in ['0', '1']:
+                    raise ValueError("binary string must contain only ones and\
+                     zeroes")
+
+        if x[0] == '1':
+            return -32768 - int(x[1:], 2)
+        else:
+            return int(x, 2)
 
     @staticmethod
     def _instruction_call(instruction, *args):
@@ -57,7 +110,56 @@ class Interpreter(object):
         instruction(*args)
 
     @staticmethod
-    def _mem_position_checking(P):
+    def _int16_type_checking(num):
+        """
+        Helper method, since python has only unlimited precision int, this
+        method checks if an python int type is also within 16bits signed int
+        precision.Assumes C standard for int16 so I must be in the interval:
+        [-32767, 32767]
+
+        # Args
+            - :I: integer
+
+        # Returns
+            - True if arg passes checks
+
+        # Raises
+            - :TypeError: if I is not int
+            - :ValueError: if I outside of [-32767, 32767] interval
+        """
+        if not isinstance(num, int):
+            raise TypeError("num must be an integer")
+        elif abs(num) > 32767:
+            raise ValueError("num must be in the [-32767, 32767] range")
+        else:
+            return True
+
+    def _instruction_pointer_checking(self, I):
+        """
+        Helper function, checks if a given int is a valid instrucion pointer
+        for the Instance's source file
+
+        # Args
+            - :I: integer
+
+        # Returns
+            - True if arg passes checks
+
+        # Raises
+            - :TypeError: if I is not int
+            - :ValueError: If I negative or larger than the source file
+                        instruction count
+        """
+        if not isinstance(num, int):
+            raise TypeError("I must be an integer")
+        elif I < 0 or I > self._source_line_count:
+            raise ValueError("I must be positive and less than the source\
+             file line count")
+        else:
+            return True
+
+    @staticmethod
+    def _mem_position_checking(P, mem_type):
         """
         Helper method, type and value checking for integer memory position
         argument for CAJOlang instructions, if argument passes checks returns
@@ -65,18 +167,23 @@ class Interpreter(object):
 
         # Args
             - :P: integer memory position (memory-indexed)
+            - :mem_type: either 'int' or 'file'
 
         # Returns
             - True if arg passes checks
 
         # Raises
             - :TypeError: if P is not int
-            - :ValueError: if P outside of [0, 2] interval
+            - :ValueError: if P outside of [0, max] interval
         """
+
+        mem_size = {'int': 2, 'file': 1}
+
         if not isinstance(P, int):
             raise TypeError("P must be an integer")
-        elif P < 0 or P > 2:
-            raise ValueError("P must be in the range of values of 0 to 2")
+        elif P < 0 or P > mem_size[mem_type]:
+            raise ValueError("P must be in the range of values of 0 to %d" %
+                             mem_size[mem_type])
         else:
             return True
 
@@ -87,7 +194,9 @@ class Interpreter(object):
         # Args
           :P: integer memory position (zero-indexed)
         """
-        self.stack.integers[P] = self.stack.temp_area
+        if self._mem_position_checking(P, 'int'):
+            self._stack.integer_mem[P] = self._stack.temp_area
+            self._instruction_pointer += 1
 
     def _CAJO_COPY_FROM_MEMORY(self, P):
         """
@@ -97,6 +206,9 @@ class Interpreter(object):
         # Args
           :P: integer memory position (zero-indexed)
         """
+        if self._mem_position_checking(P, 'int'):
+            self._stack.temp_area = self._stack.integer_mem
+            self._instruction_pointer += 1
 
     def _CAJO_SET_MEMORY(self, number, P):
         """
@@ -107,7 +219,10 @@ class Interpreter(object):
 
           :P: integer memory position (zero-indexed)
         """
-        self.stack.set_memory(number, P)
+        if self._int16_type_checking(number):
+            if self._mem_position_checking(P):
+                self._stack.integer_mem[P] = number
+                self._instruction_pointer += 1
 
     def _CAJO_ADD(self, P):
         """
@@ -117,7 +232,9 @@ class Interpreter(object):
         # Args
           :P: integer memory position (zero-indexed)
         """
-        pass
+        if self._mem_position_checking(P, 'int'):
+            self._stack.temp_area += self._stack.integer_mem[P]
+            self._instruction_pointer += 1
 
     def _CAJO_SUBTRACT(self, P):
         """
@@ -127,13 +244,15 @@ class Interpreter(object):
         # Args
           :P: integer memory position (zero-indexed)
         """
-        pass
+        if self._mem_position_checking(P, 'int'):
+            self._stack.temp_area -= self._stack.integer_mem[P]
+            self._instruction_pointer += 1
 
     def _CAJO_PRINT(self):
         """
         Print the value of temp_area to stdout
         """
-        pass
+        print(self._stack.temp_area)
 
     def _CAJO_JUMP_IF_NEGATIVE_TO(self, I):
         """
@@ -143,7 +262,9 @@ class Interpreter(object):
         # Args
           :I: Instruction number (zero-indexed)
         """
-        pass
+        if self._instruction_pointer_checking(I):
+            if self._stack.temp_area < 0:
+                self._instruction_pointer = I
 
     def _CAJO_JUMP_IF_POSITIVE_TO(self, I):
         """
@@ -154,7 +275,9 @@ class Interpreter(object):
           :I: Instruction# Args
           :I: Instruction number (zero-indexed) number (zero-indexed)
         """
-        pass
+        if self._instruction_pointer_checking(I):
+            if self._stack.temp_area > 0:
+                self._instruction_pointer = I
 
     def _CAJO_JUMP_IF_ZERO_TO(self, I):
         """
@@ -164,7 +287,9 @@ class Interpreter(object):
         # Args
           :I: Instruction number (zero-indexed)
         """
-        pass
+        if self._instruction_pointer_checking(I):
+            if self._stack.temp_area == 0:
+                self._instruction_pointer = I
 
     def _CAJO_JUMP(self, I):
         """
@@ -174,7 +299,8 @@ class Interpreter(object):
         # Args
           :I: Instruction number (zero-indexed)
         """
-        pass
+        if self._instruction_pointer_checking(I):
+            self._instruction_pointer = I
 
     def _CAJO_OPEN(self, string, P, mode):
         """
@@ -184,14 +310,21 @@ class Interpreter(object):
         is WRITE only mode
 
         # Args
-             while source.readli
           :string: filename
 
           :P: integer memory position (zero-indexed)
 
           :mode: 0=READ ONLY, 1=WRITE ONLY
         """
-        pass
+        mode_map = ['r', 'a']
+        if self._mem_position_checking(P, 'file'):
+            if not isinstance(mode, int):
+                raise TypeError("mode must be an integer")
+            elif not (mode == 1 or mode == 0):
+                raise ValueError("mode must be either 1 or 0")
+            else:
+                self._stack.file_handles[P] = open(string, mode_map[mode])
+                self._instruction_pointer += 1
 
     def _CAJO_CLOSE(self, P):
         """
@@ -200,7 +333,13 @@ class Interpreter(object):
         # Args
           :P: integer memory position (zero-indexed)
         """
-        pass
+        if self._mem_position_checking(P, 'file'):
+            if not self._stack.file_handles:
+                raise RuntimeError("File descriptor memory position %d not\
+                initialized" % P)
+            else:
+                self._stack.file_handles[P].close()
+                self._instruction_pointer += 1
 
     def _CAJO_READ(self, P):
         """
@@ -210,7 +349,13 @@ class Interpreter(object):
         # Args
           :P: integer memory position (zero-indexed)
         """
-        pass
+        if self._mem_position_checking(P):
+            if not self._stack.file_handles[P].readable():
+                raise IOError("File is not readable")
+            else:
+                line = self._stack.file_handles[P].readilne()
+                self._stack.temp_area = bin2int(line.rstrip())
+                self._instruction_pointer += 1
 
     def _CAJO_WRITE(self, P):
         """
@@ -220,9 +365,15 @@ class Interpreter(object):
         # Args
           :P: integer memory position (zero-indexed)
         """
-        pass
+        if self._mem_position_checking(P):
+            if not self._stack.file_handles[P].writable():
+                raise IOError("File is not writable")
+            else:
+                self._stack.file_handles[P].write(
+                    dec2bin(self._stack.temp_area) + '\n')
+                self._instruction_pointer += 1
 
-    def parser(self, statement):
+    def _parse(self, statement):
         """
         Parses a statement from a CAJOlang source code file into an
         instruction and its arguments
@@ -240,7 +391,7 @@ class Interpreter(object):
 
         return (instrucion, args)
 
-    def _get_execution_minute(self):
+    def get_execution_minute(self):
         """
         Reads the source code file and returns the minute when the file is
         to be executed
@@ -260,20 +411,26 @@ class Interpreter(object):
         Runs CAJOlang interpreter reading through the source code and
         executing statements sequentially
         """
+        execution_buffer = []
         with open(self._source_file, 'r') as source:
-            # skips first line
-            line = source.readline()
             line = source.readline()
 
             while line:
-                statement = line.rstrip()
-                (instrucion, args) = parse(statement)
-
-                if instruction not in self._instruction_set:
-                    raise NameError(
-                        "Illegal operation, %s not in CAJOlang instruction set"
-                        % instruction)
-                else:
-                    _instruction_call(instruction, *args)
-
+                execution_buffer.append(line.rstrip())
                 line = source.readline()
+
+            # Appends empty string to execution buffer to symbolize EOF
+            execution_buffer.append("")
+            self._source_line_num = len(execution_buffer)
+
+        statement = execution_buffer[self._instruction_pointer]
+        while statement:
+            (instrucion, args) = self._parse(statement)
+
+            if instruction not in self._instruction_set:
+                raise NameError(
+                    "Illegal operation, %s not in CAJOlang instruction set"
+                    % instruction)
+            else:
+                _instruction_call(instruction, *args)
+                statement = execution_buffer[self._instruction_pointer]
