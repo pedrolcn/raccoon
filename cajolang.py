@@ -450,3 +450,5 @@ class Interpreter(object):
                 self._instruction_call(self._instruction_set[instruction],
                                        *args)
                 statement = execution_buffer[self._instruction_pointer]
+
+        self._instruction_pointer = 0

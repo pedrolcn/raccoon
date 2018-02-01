@@ -22,13 +22,14 @@ def get_tasks(filelist, execution_schedule):
 
     # Executes the interpreter as a background process so that it does not
     # block the scheduling loop
-    thread = threading.Thread(target=execute_scheduled_tasks, args=())
+    thread = threading.Thread(target=execute_scheduled_tasks,
+                              args=(tasklist, filelist))
     thread.daemon = True
     thread.start()
 
 
 def main(filelist, execution_schedule):
-    schedule.every().minute.do(get_tasks)
+    schedule.every().minute.do(get_tasks, filelist, execution_schedule)
 
     while True:
         schedule.run_pending()
@@ -36,26 +37,29 @@ def main(filelist, execution_schedule):
 
 if __name__ == "__main__":
     filelist = {}
-    execution_schedule = [None for i in range(60)]
+    execution_schedule = [[] for i in range(60)]
 
     # Reading from stdin until EOF
     for line in sys.stdin:
         path = line.rstrip()
-        filename = os.path.split(arg)[1]
+        filename = os.path.split(path)[1]
         ext = os.path.splitext(filename)[1]
 
-        if not os.path.exists(arg):
+        if not os.path.exists(path):
             raise IOError("File %s does not exist" % path)
-        if not os.path.isfile(arg):
+        if not os.path.isfile(path):
             raise IOError("argument %s is not a file" % path)
         if ext != '.cl':
             raise IOError("argument %s is not a CAJOlang source file" % path)
 
         # Launches an Intrpreter instance for each argument source file which
         # remains innactive-may not be the most memmory efficient way to do it
-        filelist[filename] = {'instance': Interpreter(path)}
-        execution_schedule[filelist[filename]['instance'].
-                           get_execution_minute()].append(filename)
+        filelist[filename] = Interpreter(path)
+        exec_minute = filelist[filename].get_execution_minute()
+        print("added file %s to scheduler to be execute every minute %d"
+              % (filename, exec_minute))
+        execution_schedule[exec_minute].append(filename)
 
     # Start execution loop
+    print("Scheduler Started at ", datetime.now())
     main(filelist, execution_schedule)
