@@ -28,7 +28,7 @@ def get_tasks(filelist, execution_schedule):
 
 
 def main(filelist, execution_schedule):
-    schedule.every().minute.do()
+    schedule.every().minute.do(get_tasks)
 
     while True:
         schedule.run_pending()
