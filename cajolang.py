@@ -421,7 +421,7 @@ class Interpreter(object):
             minute = source.readline().rstrip()
             return int(minute)
 
-    def interpret(self):
+    def run(self):
         """
         Runs CAJOlang interpreter reading through the source code and
         executing statements sequentially
