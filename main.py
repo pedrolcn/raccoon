@@ -86,7 +86,7 @@ def main(filelist, execution_schedule):
             schedule.run_pending()
             time.sleep(1)
         except KeyboardInterrupt:
-            print('\n%s: Execution interupted by KeyboardInterrupt'
+            print('\n%s: Execution stopped by KeyboardInterrupt'
                   % timestamp)
             break
 
