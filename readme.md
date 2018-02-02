@@ -33,5 +33,10 @@ EOF (ctrl + d)
 ## Implementation Details
 
 ### int16 binary specification:
-    The binary representation chosen for the 16 bit integers was the same implemented on the C language,where a 16bit integer can be represented by a base 2 number of the format 0bSXXXXXXXXXXXXXXX where S is the sign bit which is 1 for negative numbers and 0 for positive, and XXXXXXXXXXXXXXX is the 15bit binary representation of a number between -32,767 and 32,767, for positive numbers this representation is done by binary-coded-decimal, for negative numbers it is two's complements.  
-    The integer -32,768 can't be represented because according to the ISO-C specification 0b1000000000000000 is a trap value to indicate overflow
+    The binary representation chosen for the 16 bit integers was the same implemented on the C language,where a  
+    16bit integer can be represented by a base 2 number of the format 0bSXXXXXXXXXXXXXXX where S is the sign bit  
+    which is 1 for negative numbers and 0 for positive, and XXXXXXXXXXXXXXX is the 15bit binary representation of 
+    a number between -32,767 and 32,767, for positive numbers this representation is done by binary-coded-decimal 
+    for negative numbers it is two's complements.  
+    The integer -32,768 can't be represented because according to the ISO-C specification 0b1000000000000000 is a 
+    trap value to indicate overflow
