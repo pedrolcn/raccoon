@@ -1,4 +1,23 @@
 #!/usr/bin/python3
+"""
+Raccoon recruiting process project main script
+
+implements a scheduler that reads a number of CAJOlang files from stdin and
+runs the CAJOlang interpreter every hour on a given minute specified on the
+source code of each .cl file.
+
+Usage:
+    ~ $ cat /path/to/input.txt | python3 main.py
+    where input.txt is a text file containing the path to one valid cajolang
+    file per line
+
+    alternatively:
+    ~ $ python3 main.py
+    /path/to/file1.cl
+    /path/to/file2.cl
+    ...
+    EOF(ctrl + d)
+"""
 import os
 import sys
 import time
@@ -9,6 +28,25 @@ from cajolang import Interpreter
 
 
 def get_tasks(filelist, execution_schedule):
+    """
+    Gets the files to be executed on the current minute from the
+    execution_schedule arg and feeds it to the child function
+    execute_scheduled_tasks which runs the interpreter instance associated
+    with each .cl file designated to that minute
+
+    execute_scheduled_tasks is ran on a background thread so as to not block
+    the main process in case one of the interpreters session takes long to
+    complete
+
+    This is the function that the scheduler schedules the execution every
+    minute
+
+    # args:
+        - :filelist: dict with filenames as keys and fields are the associated
+          interpreter session
+        - :execution_schedule: list of the lists of functions to be executed
+          each minute, indexed by minutes
+    """
     timestamp = datetime.now()
     minute = timestamp.minute
     timestamp_str = timestamp.strftime('%y/%m/%d %H:%M:%S')
@@ -16,6 +54,17 @@ def get_tasks(filelist, execution_schedule):
     tasklist = execution_schedule[minute]
 
     def execute_scheduled_tasks(tasklist, filelist):
+        """
+        Executes the programs specified by tasklist by running the interpreter
+        on filelist associated with each file
+
+        is executed on a background thread
+
+        # args:
+            - :tasklist: list of filenames to be executed
+            - :filelist: dict with filenames as keys and fields are the
+              associated interpreter session
+        """
         for item in tasklist:
             print("%s -> Running task %s" % (timestamp_str, item))
             filelist[item].run()
@@ -30,13 +79,21 @@ def get_tasks(filelist, execution_schedule):
 
 def main(filelist, execution_schedule):
     schedule.every().minute.do(get_tasks, filelist, execution_schedule)
+    timestamp = datetime.now()
 
     while True:
-        schedule.run_pending()
-        time.sleep(1)
+        try:
+            schedule.run_pending()
+            time.sleep(1)
+        except KeyboardInterrupt:
+            print('\n%s: Execution interupted by KeyboardInterrupt'
+                  % timestamp)
+            break
 
 if __name__ == "__main__":
     filelist = {}
+    # Execution schedule is modeled as a list indexed by the execution minute
+    # containing a list with the programs to be executed for each minute
     execution_schedule = [[] for i in range(60)]
 
     # Reading from stdin until EOF
@@ -52,8 +109,9 @@ if __name__ == "__main__":
         if ext != '.cl':
             raise IOError("argument %s is not a CAJOlang source file" % path)
 
-        # Launches an Intrpreter instance for each argument source file which
-        # remains innactive-may not be the most memmory efficient way to do it
+        # Launches an Intrpreter instance for each argument source file this
+        # is done because the way the project was implemented, all the
+        # interaction with the source code is done by the Interpreter class
         filelist[filename] = Interpreter(path)
         exec_minute = filelist[filename].get_execution_minute()
         print("added file %s to scheduler to be execute every minute %d"

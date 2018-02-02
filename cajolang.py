@@ -1,6 +1,7 @@
-# TODO: - CAJO_ADD and CAJO_SUBTRACT handling of over/underflow
-#       - CAJO_JUMP_IF_NEGATIVE, CAJO_JUM_IF_POSITIVE, CAJO_JUMP_IF_ZERO,
-#         CAJO_JUMP exception handling if destination pointer is out of bounds
+"""
+CAJOlang module file
+Implements tha CAJOlang according to the given specification
+"""
 
 
 class Stack(object):
