@@ -4,10 +4,14 @@ Implements tha CAJOlang according to the given specification
 """
 from lib.memspace import MemSpace
 from lib.validation import Validator
+from lib.typeconv import Converter
 
 is_int16 = Validator.int16_type_checking
 is_valid_instruction_pointer = Validator.instruction_pointer_checking
 is_valid_mem_position = Validator.mem_position_checking
+
+int2bin = Converter.int2bin
+bin2int = Converter.bin2int
 
 
 class Interpreter(object):
@@ -48,49 +52,6 @@ class Interpreter(object):
         # Line count is initialized once the interpreter is started
         self._source_line_count = None
         # self.execution_minute = self._get_execution_minute()
-
-    @staticmethod
-    def int2bin(x):
-        """
-        Helper function, implements conversion of Python ints to C standard
-        16bit int, where the HO bit is the sign with 1 meaning negative and
-        negative numbers are represented using 2's complement.
-
-        # Args
-            - x: a python int
-
-        # Returns
-            - a string containig the 16bit representation of the integer
-        """
-        if x >= 0:
-            return format(x, '016b')
-        else:
-            return '1' + format(32768 + x, '015b')
-
-    @staticmethod
-    def bin2int(x):
-        """
-        Helper Method, converts a string of a C standard binary representation
-        of a int16_t to a pyton int. Is the inverse of int2bin
-
-        # Args
-            - x: a string containing the representation of a 16 bit int
-
-        # returns
-            - the python int corresponding to the binary input
-        """
-        if len(x) != 16:
-            raise ValueError("binary value must be 16 bits long")
-        else:
-            for bit in x:
-                if bit not in ['0', '1']:
-                    raise ValueError("binary string must contain only ones and\
-                     zeroes")
-
-        if x[0] == '1':
-            return -32768 + int(x[1:], 2)
-        else:
-            return int(x, 2)
 
     @staticmethod
     def _instruction_call(instruction, *args):
@@ -273,7 +234,7 @@ class Interpreter(object):
                 raise IOError("File is not readable")
             else:
                 line = self._memspace.file_handles[P].readline()
-                self._memspace.temp_area = self.bin2int(line.rstrip())
+                self._memspace.temp_area = bin2int(line.rstrip())
                 self._instruction_pointer += 1
 
     def _CAJO_WRITE(self, P):
@@ -289,7 +250,7 @@ class Interpreter(object):
                 raise IOError("File is not writable")
             else:
                 self._memspace.file_handles[P].write(
-                    self.int2bin(self._memspace.temp_area) + '\n')
+                    int2bin(self._memspace.temp_area) + '\n')
                 self._instruction_pointer += 1
 
     def _parse(self, statement):
