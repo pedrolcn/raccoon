@@ -25,11 +25,11 @@ where input may be any text file containing on each line a valid path to a CAJOl
 
 Alternatively the inputs may be specified mannually by running:
 
-~ $ python3 main.py  
-/path/to/file1.cl  
-/path/to/file2.cl  
-...  
-EOF (ctrl + d)
+    ~ $ python3 main.py  
+    /path/to/file1.cl  
+    /path/to/file2.cl  
+    ...  
+    EOF (ctrl + d)
 
 ## Implementation Details
 
