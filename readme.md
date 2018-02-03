@@ -45,4 +45,4 @@ trap value to indicate overflow
 ### Scheduler Limitations
 The specification requires that each CAJOlang program be executed on the specified minute but does not make any requirements about on which second of said minute it shall be executed
 Due to the scheduler implementation details, the second of the specified minute on which each program will run will be tha same second that the scheduler is started (eg. if the scheduler is started at 21:18:27 each program shall execute at XX:MINUTE:27).
-No guarantees are made as if each program's execution shall end on the same minute as it was specified, however as the interpreter sessions run on a separate thread, the program's execution shall not interfere with the scheduler timing
+No guarantees are made as to if each program's execution shall end on the same minute as it began, however as the interpreter sessions run on a separate thread, the program's execution shall not interfere with the scheduler timing

@@ -26,11 +26,13 @@ from datetime import datetime
 import schedule
 from lib.cajolang import Interpreter
 
+timestamp = datetime.now
+
 
 def get_tasks(filelist, execution_schedule):
     """
     Gets the files to be executed on the current minute from the
-    execution_schedule arg and feeds it to the child function
+    execution_schedule arg and feeds it to the function
     execute_scheduled_tasks which runs the interpreter instance associated
     with each .cl file designated to that minute
 
@@ -47,27 +49,10 @@ def get_tasks(filelist, execution_schedule):
         - :execution_schedule: list of the lists of functions to be executed
           each minute, indexed by minutes
     """
-    timestamp = datetime.now()
-    minute = timestamp.minute
-    timestamp_str = timestamp.strftime('%y/%m/%d %H:%M:%S')
+    minute = timestamp().minute
+    timestamp_str = timestamp().strftime('%y/%m/%d %H:%M:%S')
 
     tasklist = execution_schedule[minute]
-
-    def execute_scheduled_tasks(tasklist, filelist):
-        """
-        Executes the programs specified by tasklist by running the interpreter
-        on filelist associated with each file
-
-        is executed on a background thread
-
-        # args:
-            - :tasklist: list of filenames to be executed
-            - :filelist: dict with filenames as keys and fields are the
-              associated interpreter session
-        """
-        for item in tasklist:
-            print("%s -> Running task %s" % (timestamp_str, item))
-            filelist[item].run()
 
     # Executes the interpreter as a background process so that it does not
     # block the scheduling loop
@@ -75,6 +60,25 @@ def get_tasks(filelist, execution_schedule):
                               args=(tasklist, filelist))
     thread.daemon = True
     thread.start()
+
+
+def execute_scheduled_tasks(tasklist, filelist):
+    """
+    Executes the programs specified by tasklist by running the interpreter
+    on filelist associated with each file
+
+    is executed on a background thread
+
+    # args:
+        - :tasklist: list of filenames to be executed
+        - :filelist: dict with filenames as keys and fields are the
+            associated interpreter session
+    """
+    timestamp_str = timestamp().strftime('%y/%m/%d %H:%M:%S')
+
+    for item in tasklist:
+        print("%s -> Running task %s" % (timestamp_str, item))
+        filelist[item].run()
 
 
 def main(filelist, execution_schedule):
@@ -119,5 +123,5 @@ if __name__ == "__main__":
         execution_schedule[exec_minute].append(filename)
 
     # Start execution loop
-    print("Scheduler Started at ", datetime.now())
+    print("Scheduler Started at ", timestamp())
     main(filelist, execution_schedule)
