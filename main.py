@@ -24,7 +24,7 @@ import time
 import threading
 from datetime import datetime
 import schedule
-from cajolang import Interpreter
+from lib.cajolang import Interpreter
 
 
 def get_tasks(filelist, execution_schedule):
