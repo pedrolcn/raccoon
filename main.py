@@ -22,9 +22,16 @@ import os
 import sys
 import time
 import threading
+import logging
 from datetime import datetime
 import schedule
 from lib.cajolang import Interpreter
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('scheduler')
+
+# disable logging from schedule module
+logging.getLogger('schedule').setLevel(logging.WARNING)
 
 timestamp = datetime.now
 
@@ -77,7 +84,7 @@ def execute_scheduled_tasks(tasklist, filelist):
     timestamp_str = timestamp().strftime('%y/%m/%d %H:%M:%S')
 
     for item in tasklist:
-        print("%s -> Running task %s" % (timestamp_str, item))
+        logger.info("%s -> Running task %s" % (timestamp_str, item))
         filelist[item].run()
 
 
@@ -90,11 +97,19 @@ def main(filelist, execution_schedule):
             schedule.run_pending()
             time.sleep(1)
         except KeyboardInterrupt:
-            print('\n%s: Execution stopped by KeyboardInterrupt'
-                  % timestamp)
+            logger.info('%s: Execution stopped by KeyboardInterrupt\n'
+                        % timestamp)
             break
 
 if __name__ == "__main__":
+    if not os.path.exists("logs"):
+        os.mkdir("logs")
+
+    handler = logging.FileHandler(
+        "logs/%s_log.txt" % timestamp().strftime("%Y-%m-%d"))
+    logger.addHandler(handler)
+    logger.info("Scheduler Started at %s" % str(timestamp()))
+
     filelist = {}
     # Execution schedule is modeled as a list indexed by the execution minute
     # containing a list with the programs to be executed for each minute
@@ -118,10 +133,9 @@ if __name__ == "__main__":
         # interaction with the source code is done by the Interpreter class
         filelist[filename] = Interpreter(path)
         exec_minute = filelist[filename].get_execution_minute()
-        print("added file %s to scheduler to be execute every minute %d"
-              % (filename, exec_minute))
+        logger.info("added file %s to scheduler to be execute every minute %d"
+                    % (filename, exec_minute))
         execution_schedule[exec_minute].append(filename)
 
     # Start execution loop
-    print("Scheduler Started at ", timestamp())
     main(filelist, execution_schedule)
