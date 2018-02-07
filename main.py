@@ -57,8 +57,6 @@ def get_tasks(filelist, execution_schedule):
           each minute, indexed by minutes
     """
     minute = timestamp().minute
-    timestamp_str = timestamp().strftime('%y/%m/%d %H:%M:%S')
-
     tasklist = execution_schedule[minute]
 
     # Executes the interpreter as a background process so that it does not
@@ -90,7 +88,6 @@ def execute_scheduled_tasks(tasklist, filelist):
 
 def main(filelist, execution_schedule):
     schedule.every().minute.do(get_tasks, filelist, execution_schedule)
-    timestamp = datetime.now()
 
     while True:
         try:
@@ -98,7 +95,7 @@ def main(filelist, execution_schedule):
             time.sleep(1)
         except KeyboardInterrupt:
             logger.info('%s: Execution stopped by KeyboardInterrupt\n'
-                        % timestamp)
+                        % timestamp())
             break
 
 if __name__ == "__main__":

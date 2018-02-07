@@ -36,9 +36,9 @@ class Converter(object):
         of a int16_t to a pyton int. Is the inverse of int2bin
 
         # Args
-            - x: a string containing the representation of a 16 bit int
+            - :param x: a string containing the representation of a 16 bit int
 
-        # returns
+        # Returns
             - the python int corresponding to the binary input
         """
         if len(x) != 16:

@@ -15,7 +15,7 @@
 
      ~ $ sudo pip3 install scheduler
 
-- clone the master branch from project github repository into the desired folder
+- clone the master branch from the project github repository or extract the .zip file into the desired folder
 
 ## How to Run:
 The program may be executed by running:  

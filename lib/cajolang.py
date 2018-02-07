@@ -43,20 +43,17 @@ class Interpreter(object):
             "CAJO_WRITE": self._CAJO_WRITE
         }
 
-        # Instruction pointer is initialized at 1 because statement 0 of a
-        # CAJOlang source file is not an executable instruction
         self._instruction_pointer = 0
         self._source_file = source_file
         self._memspace = MemSpace()
 
         # Line count is initialized once the interpreter is started
         self._source_line_count = None
-        # self.execution_minute = self._get_execution_minute()
 
     @staticmethod
     def _instruction_call(instruction, *args):
         """
-        Thin wrapper for calling instructions with a given list of arguments
+        Thin wrapper around an instruction call with a given list of arguments
         """
         instruction(*args)
 
